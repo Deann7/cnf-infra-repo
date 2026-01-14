@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cnf-simulator-deployment
+  labels:
+    app: cnf-simulator
+spec:
+  # Replica set countable
+  replicas: 3
+  selector:
+    matchLabels:
+      app: cnf-simulator
+  template:
+    metadata:
+      labels:
+        app: cnf-simulator
+    spec:
+      containers:
+      - name: cnf-simulator
+        # Used Image
+        image: cnf-app-repo:latest
+        ports:
+        - containerPort: 8080
+        # Liveness probe 
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        # Readiness probe for traffic management
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        # Resource quota for efficient resource management
+        resources:
+          limits:
+            cpu: 100m
+            memory: 128Mi
+          requests:
+            cpu: 50m
+            memory: 64Mi

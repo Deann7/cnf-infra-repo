@@ -1,0 +1,25 @@
+# Ignore temporary files
+*.tmp
+*.temp
+*~
+
+# Ignore editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Icon?
+
+# Ignore sensitive files
+.env.local
+.env.production
+.env.development
+
+# Ignore compiled manifests (if we have any generated files)
+*.yaml.bak
+*.yml.bak

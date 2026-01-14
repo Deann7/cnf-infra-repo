@@ -1,0 +1,16 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: cnf-simulator-network-policy
+spec:
+  # Selector for target pods
+  podSelector:
+    matchLabels:
+      app: cnf-simulator
+  policyTypes:
+  - Ingress
+  ingress:
+  # rule that set allow traffic to port 8080
+  - ports:
+    - protocol: TCP
+      port: 8080
