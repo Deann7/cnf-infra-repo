@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ocloud-app-deployment
+  namespace: ocloud-apps
+  labels:
+    app: ocloud-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ocloud-app
+  template:
+    metadata:
+      labels:
+        app: ocloud-app
+    spec:
+      containers:
+      - name: ocloud-app-container
+        image: ocloud-app:latest  # Use the image built on Kali Linux
+        ports:
+        - containerPort: 8080       # Adjust to your app's port
+        env:
+        - name: ENV
+          value: "development"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ocloud-app-service
+  namespace: ocloud-apps
+spec:
+  selector:
+    app: ocloud-app
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080  # Adjust to your app's port
+  type: ClusterIP
