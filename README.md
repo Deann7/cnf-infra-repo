@@ -79,3 +79,20 @@ After deployment, the following endpoints will be available:
 - `/status` - Status information
 - `/config` - Configuration details
 - `/info` - Service information
+
+## Environment-Specific Deployments
+
+This infrastructure supports multiple environments using different value files:
+
+- Development: `values-dev.yaml` - Single replica, NodePort service, less restrictive security
+- Production: `values-prod.yaml` - Multiple replicas, LoadBalancer service, enhanced security and autoscaling
+
+To deploy to different environments:
+
+```bash
+# Deploy to development
+helm install ocloud-app-dev charts/ocloud-app -f charts/ocloud-app/values-dev.yaml --namespace ocloud-dev --create-namespace
+
+# Deploy to production
+helm install ocloud-app-prod charts/ocloud-app -f charts/ocloud-app/values-prod.yaml --namespace ocloud-prod --create-namespace
+```
