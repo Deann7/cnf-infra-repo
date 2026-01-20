@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: ocloud-app-container
-        image: ocloud-app:latest  # Use the image built on Kali Linux
+        image: ghcr.io/Deann7/cnf-simulator:latest  # Use the image built by CI pipeline
         ports:
         - containerPort: 8080       # Adjust to your app's port
         env:

@@ -1,6 +1,17 @@
 apiVersion: v2
 name: ocloud-app
-description: A Helm chart for O-Cloud application
+description: A Helm chart for deploying the O-Cloud CNF simulator application to Kubernetes
 type: application
 version: 0.1.0
 appVersion: "1.0.0"
+keywords:
+  - o-cloud
+  - cnf
+  - simulator
+  - networking
+home: https://github.com/Deann7/cnf-infra-repo
+sources:
+  - https://github.com/Deann7/cnf-app-repo
+maintainers:
+  - name: O-Cloud Team
+    email: ocloud@example.com

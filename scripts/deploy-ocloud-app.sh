@@ -28,7 +28,7 @@ fi
 # Set default values
 NAMESPACE="ocloud-apps"
 RELEASE_NAME="ocloud-app-release"
-IMAGE_REPO="localhost/ocloud-app"
+IMAGE_REPO="ghcr.io/Deann7/cnf-simulator"
 IMAGE_TAG="latest"
 
 # Parse command line arguments
@@ -57,7 +57,7 @@ while [[ $# -gt 0 ]]; do
             echo "Options:"
             echo "  -n, --namespace STRING   Kubernetes namespace (default: ocloud-apps)"
             echo "  -r, --release STRING     Helm release name (default: ocloud-app-release)"
-            echo "  -i, --image STRING       Docker image repository (default: localhost/ocloud-app)"
+            echo "  -i, --image STRING       Docker image repository (default: ghcr.io/Deann7/cnf-simulator)"
             echo "  -t, --tag STRING         Docker image tag (default: latest)"
             echo "  -h, --help               Show this help message"
             exit 0

@@ -26,10 +26,10 @@ securityContext:
   capabilities:
     drop:
     - ALL
-  readOnlyRootFilesystem: true
+  readOnlyRootFilesystem: true  # More restrictive in production
   runAsNonRoot: true
-  runAsUser: 1000
-  runAsGroup: 3000
+  runAsUser: 65532  # Matches the non-root user in the container image
+  runAsGroup: 65532
 
 service:
   type: LoadBalancer

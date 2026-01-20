@@ -30,7 +30,7 @@ The following table lists the configurable parameters of the ocloud-app chart an
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `replicaCount` | Number of application pods | `2` |
-| `image.repository` | Image repository | `localhost/ocloud-app` |
+| `image.repository` | Image repository | `ghcr.io/Deann7/cnf-simulator` |
 | `image.pullPolicy` | Image pull policy | `IfNotPresent` |
 | `image.tag` | Image tag | `latest` |
 | `service.type` | Service type | `ClusterIP` |
@@ -67,3 +67,28 @@ To use a custom values file:
 
 ```bash
 helm install my-ocloud-app ../cnf-infra-repo/charts/ocloud-app -f my-values.yaml
+```
+
+## Registry Integration
+
+This chart is designed to work with container registries like GitHub Container Registry (GHCR).
+The default image is pulled from `ghcr.io/Deann7/cnf-simulator`, which is built and pushed by the CI pipeline.
+
+For private registries, you may need to create image pull secrets:
+
+```bash
+kubectl create secret docker-registry registry-secret \
+  --docker-server=<registry-url> \
+  --docker-username=<username> \
+  --docker-password=<password> \
+  --docker-email=<email>
+```
+
+Then reference the secret in your values file:
+
+```yaml
+imagePullSecrets:
+  - name: registry-secret
+image:
+  repository: <your-private-registry>/cnf-simulator
+  tag: <specific-tag>

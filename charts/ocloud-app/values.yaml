@@ -5,12 +5,15 @@
 replicaCount: 2
 
 image:
-  repository: localhost/ocloud-app
+  repository: ghcr.io/Deann7/cnf-simulator
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: "latest"
 
 imagePullSecrets: []
+# Add support for specifying custom registry credentials
+# imagePullSecrets:
+#   - name: registry-secret
 nameOverride: ""
 fullnameOverride: "ocloud-app"
 
@@ -25,16 +28,17 @@ serviceAccount:
 
 podAnnotations: {}
 
-podSecurityContext: {}
-  # fsGroup: 2000
+podSecurityContext:
+  fsGroup: 2000
 
-securityContext: {}
-  # capabilities:
-  #   drop:
-  #   - ALL
-  # readOnlyRootFilesystem: true
-  # runAsNonRoot: true
-  # runAsUser: 1000
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: false  # Set to false since the app may need to write logs
+  runAsNonRoot: true
+  runAsUser: 65532  # Matches the non-root user in the container image
+  runAsGroup: 65532
 
 service:
   type: ClusterIP
@@ -54,17 +58,14 @@ ingress:
           pathType: ImplementationSpecific
   tls: []
 
-resources: {}
-  # We usually recommend not to specify default resources and to leave this as a conscious
-  # choice for the user. This also increases chances charts run on environments with little
-  # resources, such as Minikube. If you do want to specify resources, uncomment the following
-  # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
-  # limits:
-  #   cpu: 100m
-  #   memory: 128Mi
-  # requests:
-  #   cpu: 100m
-  #   memory: 128Mi
+resources:
+  # Recommended resources for the optimized container from Day 7
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
 
 autoscaling:
   enabled: false
