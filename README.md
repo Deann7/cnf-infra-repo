@@ -1,6 +1,6 @@
 # O-Cloud Infrastructure Repository
 
-This repository contains Kubernetes manifests and Helm charts for deploying the O-Cloud application.
+This repository contains Kubernetes manifests and Helm charts for deploying the O-Cloud application with integrated security scanning and quality gates.
 
 ## Contents
 
@@ -33,6 +33,7 @@ Contains packaged Helm charts for simplified deployment:
 - Configurable parameters for easy customization
 - Includes all necessary Kubernetes resources (Deployment, Service, NetworkPolicy)
 - Built with security best practices in mind
+- Integrated security scanning and quality gates configurations
 
 ### 3. Scripts (`scripts/`)
 Utility scripts for common operations:
@@ -41,6 +42,36 @@ Utility scripts for common operations:
 - Automated deployment script using Helm
 - Handles namespace creation and chart installation
 - Includes validation and status checking
+
+## Security Scanning and Quality Gates
+
+This infrastructure implements comprehensive security scanning and quality gates:
+
+### Security Scanning Configuration
+- Container vulnerability scanning using Trivy
+- Minimum security rating requirements (configurable per environment)
+- Maximum vulnerability count limits
+- Runtime security monitoring
+
+### Quality Gates Configuration
+- Code coverage thresholds (minimum 70% dev, 90% prod)
+- Performance testing with response time and throughput requirements
+- Health checks for liveness and readiness
+- Environment-specific quality requirements
+
+### Environment-Specific Security Settings
+
+#### Development Environment (`values-dev.yaml`)
+- Minimum security rating: "C"
+- Max vulnerabilities: 10
+- Quality gates: Enabled with lower thresholds
+- Performance requirements: Relaxed (1000ms response time, 50 RPS)
+
+#### Production Environment (`values-prod.yaml`)
+- Minimum security rating: "A"
+- Max vulnerabilities: 0 (zero tolerance)
+- Quality gates: Enabled with strictest thresholds
+- Performance requirements: Strict (200ms response time, 200 RPS)
 
 ## Deployment Options
 
@@ -79,6 +110,8 @@ After deployment, the following endpoints will be available:
 - `/status` - Status information
 - `/config` - Configuration details
 - `/info` - Service information
+- `/security` - Security scan information
+- `/quality` - Quality metrics information
 
 ## Environment-Specific Deployments
 

@@ -18,9 +18,18 @@ serviceAccount:
   name: ""
 
 podAnnotations: {}
+  # Add annotations for security and monitoring in dev
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8080"
+  seccomp.security.alpha.kubernetes.io/pod: 'runtime/default'
 
 podSecurityContext:
   fsGroup: 2000
+  # Additional security context settings for security scanning compliance
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  supplementalGroups: [65532]
 
 securityContext:
   capabilities:
@@ -54,6 +63,48 @@ resources:
   requests:
     cpu: 100m
     memory: 128Mi
+
+# Health checks for quality gates
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 5
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# Security scanning and quality gates configuration for dev environment
+security:
+  # Enable security scanning for containers
+  enableSecurityScanning: true
+  # Minimum security rating required (A, B, C, etc.)
+  minimumSecurityRating: "C"  # More lenient for dev environment
+  # Maximum number of vulnerabilities allowed
+  maxVulnerabilities: 10  # Higher tolerance for dev environment
+  # Enable runtime security monitoring
+  enableRuntimeSecurity: false  # Disabled for dev environment
+
+quality:
+  # Quality gate settings for dev
+  enableQualityGates: true
+  # Minimum code coverage percentage
+  minimumCodeCoverage: 70  # Lower requirement for dev environment
+  # Enable performance testing
+  enablePerformanceTesting: false  # Disabled for dev environment
+  # Performance thresholds
+  performanceThresholds:
+    responseTimeMs: 1000  # Higher tolerance for dev environment
+    throughputRequestsPerSecond: 50  # Lower requirement for dev environment
 
 autoscaling:
   enabled: false

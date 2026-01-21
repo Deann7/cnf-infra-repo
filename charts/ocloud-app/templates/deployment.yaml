@@ -4,6 +4,9 @@ metadata:
   name: {{ include "ocloud-app.fullname" . }}
   labels:
     {{- include "ocloud-app.labels" . | nindent 4 }}
+  annotations:
+    # Security scanning annotations
+    checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
 spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
@@ -37,14 +40,39 @@ spec:
             - name: http
               containerPort: {{ .Values.service.targetPort }}
               protocol: TCP
+          env:
+            - name: SECURITY_SCAN_ENABLED
+              value: {{ .Values.security.enableSecurityScanning | quote }}
+            - name: MINIMUM_SECURITY_RATING
+              value: {{ .Values.security.minimumSecurityRating | quote }}
+            - name: MAX_VULNERABILITIES
+              value: {{ .Values.security.maxVulnerabilities | quote }}
+            - name: QUALITY_GATES_ENABLED
+              value: {{ .Values.quality.enableQualityGates | quote }}
+            - name: MINIMUM_CODE_COVERAGE
+              value: {{ .Values.quality.minimumCodeCoverage | quote }}
+            - name: ENVIRONMENT
+              value: {{ .Release.Environment | quote }}
+            - name: KUBERNETES_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
           livenessProbe:
             httpGet:
-              path: /
+              path: /health
               port: http
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds | default 30 }}
+            periodSeconds: {{ .Values.livenessProbe.periodSeconds | default 10 }}
+            timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds | default 5 }}
+            failureThreshold: {{ .Values.livenessProbe.failureThreshold | default 5 }}
           readinessProbe:
             httpGet:
-              path: /
+              path: /health
               port: http
+            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds | default 5 }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds | default 5 }}
+            timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds | default 3 }}
+            failureThreshold: {{ .Values.readinessProbe.failureThreshold | default 3 }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}

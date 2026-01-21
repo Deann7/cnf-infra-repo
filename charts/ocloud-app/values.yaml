@@ -22,14 +22,25 @@ serviceAccount:
   create: true
   # Annotations to add to the service account
   annotations: {}
+    # Add security annotations for compliance
+    iam.amazonaws.com/role: ocloud-app-role
   # The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template
   name: ""
 
 podAnnotations: {}
+  # Add annotations for security and monitoring
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8080"
+  seccomp.security.alpha.kubernetes.io/pod: 'runtime/default'
 
 podSecurityContext:
   fsGroup: 2000
+  # Additional security context settings for security scanning compliance
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  supplementalGroups: [65532]
 
 securityContext:
   capabilities:
@@ -66,6 +77,48 @@ resources:
   requests:
     cpu: 100m
     memory: 128Mi
+
+# Health checks for quality gates
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 5
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# Security scanning and quality gates configuration
+security:
+  # Enable security scanning for containers
+  enableSecurityScanning: true
+  # Minimum security rating required (A, B, C, etc.)
+  minimumSecurityRating: "B"
+  # Maximum number of vulnerabilities allowed
+  maxVulnerabilities: 5
+  # Enable runtime security monitoring
+  enableRuntimeSecurity: true
+  
+quality:
+  # Quality gate settings
+  enableQualityGates: true
+  # Minimum code coverage percentage
+  minimumCodeCoverage: 80
+  # Enable performance testing
+  enablePerformanceTesting: true
+  # Performance thresholds
+  performanceThresholds:
+    responseTimeMs: 500
+    throughputRequestsPerSecond: 100
 
 autoscaling:
   enabled: false

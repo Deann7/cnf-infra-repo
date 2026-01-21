@@ -15,12 +15,23 @@ fullnameOverride: "ocloud-app-prod"
 serviceAccount:
   create: true
   annotations: {}
+    # Add security annotations for compliance
+    iam.amazonaws.com/role: ocloud-app-prod-role
   name: ""
 
 podAnnotations: {}
+  # Add annotations for security and monitoring in production
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8080"
+  seccomp.security.alpha.kubernetes.io/pod: 'runtime/default'
 
 podSecurityContext:
   fsGroup: 2000
+  # Additional security context settings for security scanning compliance
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  supplementalGroups: [65532]
 
 securityContext:
   capabilities:
@@ -39,7 +50,7 @@ service:
 ingress:
   enabled: true
   className: "nginx"
-  annotations: 
+  annotations:
     kubernetes.io/ingress.class: nginx
     kubernetes.io/tls-acme: "true"
   hosts:
@@ -60,6 +71,48 @@ resources:
     cpu: 500m
     memory: 512Mi
 
+# Health checks for quality gates
+livenessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: 8080
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 2
+
+# Security scanning and quality gates configuration for production environment
+security:
+  # Enable security scanning for containers
+  enableSecurityScanning: true
+  # Minimum security rating required (A, B, C, etc.)
+  minimumSecurityRating: "A"  # Strictest for production environment
+  # Maximum number of vulnerabilities allowed
+  maxVulnerabilities: 0  # Zero tolerance for production environment
+  # Enable runtime security monitoring
+  enableRuntimeSecurity: true  # Enabled for production environment
+
+quality:
+  # Quality gate settings for production
+  enableQualityGates: true
+  # Minimum code coverage percentage
+  minimumCodeCoverage: 90  # Highest requirement for production environment
+  # Enable performance testing
+  enablePerformanceTesting: true  # Enabled for production environment
+  # Performance thresholds
+  performanceThresholds:
+    responseTimeMs: 200  # Strictest performance requirement
+    throughputRequestsPerSecond: 200  # Highest throughput requirement
+
 autoscaling:
   enabled: true
   minReplicas: 3
@@ -71,7 +124,7 @@ nodeSelector: {}
 
 tolerations: []
 
-affinity: 
+affinity:
   podAntiAffinity:
     preferredDuringSchedulingIgnoredDuringExecution:
       - weight: 100
