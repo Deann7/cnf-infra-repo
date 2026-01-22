@@ -47,6 +47,10 @@ spec:
               value: {{ .Values.security.minimumSecurityRating | quote }}
             - name: MAX_VULNERABILITIES
               value: {{ .Values.security.maxVulnerabilities | quote }}
+            - name: CRITICAL_VULNERABILITIES_THRESHOLD
+              value: {{ .Values.security.criticalVulnerabilitiesThreshold | quote }}
+            - name: HIGH_VULNERABILITIES_THRESHOLD
+              value: {{ .Values.security.highVulnerabilitiesThreshold | quote }}
             - name: QUALITY_GATES_ENABLED
               value: {{ .Values.quality.enableQualityGates | quote }}
             - name: MINIMUM_CODE_COVERAGE
@@ -57,6 +61,12 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: spec.nodeName
+            - name: SCAN_SCHEDULE
+              value: {{ .Values.security.scanSchedule | quote }}
+            - name: POLICY_ENFORCEMENT_ENABLED
+              value: {{ .Values.security.enablePolicyEnforcement | quote }}
+            - name: SECURITY_POLICY_NAME
+              value: {{ .Values.security.policyName | quote }}
           livenessProbe:
             httpGet:
               path: /health

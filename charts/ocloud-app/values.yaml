@@ -107,6 +107,16 @@ security:
   maxVulnerabilities: 5
   # Enable runtime security monitoring
   enableRuntimeSecurity: true
+  # Security scan schedule (cron format)
+  scanSchedule: "0 2 * * *"  # Daily at 2 AM
+  # Critical vulnerability threshold that blocks deployment
+  criticalVulnerabilitiesThreshold: 0
+  # High vulnerability threshold
+  highVulnerabilitiesThreshold: 2
+  # Enable security policy enforcement
+  enablePolicyEnforcement: true
+  # Security policy name
+  policyName: "telco-security-policy"
   
 quality:
   # Quality gate settings
@@ -119,6 +129,30 @@ quality:
   performanceThresholds:
     responseTimeMs: 500
     throughputRequestsPerSecond: 100
+    
+# Additional security context configurations
+podSecurityContext:
+  fsGroup: 2000
+  # Additional security context settings for security scanning compliance
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  supplementalGroups: [65532]
+  # Enable seccomp profile for additional security
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: false  # Set to false since the app may need to write logs
+  runAsNonRoot: true
+  runAsUser: 65532  # Matches the non-root user in the container image
+  runAsGroup: 65532
+  # Add additional security context settings
+  allowPrivilegeEscalation: false
+  privileged: false
 
 autoscaling:
   enabled: false
