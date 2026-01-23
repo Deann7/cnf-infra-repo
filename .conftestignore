@@ -1,0 +1,6 @@
+.git
+*.lock
+**/templates/_helpers.tpl
+**/Chart.yaml
+**/values.yaml
+**/charts/
