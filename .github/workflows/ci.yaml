@@ -1,0 +1,144 @@
+name: Infrastructure CI Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Setup Conftest
+      run: |
+        wget https://github.com/open-policy-agent/conftest/releases/download/v0.28.2/conftest_0.28.2_Linux_x86_64.tar.gz
+        tar -xf conftest_0.28.2_Linux_x86_64.tar.gz
+        sudo mv conftest /usr/local/bin/
+
+    - name: Setup Helm
+      uses: azure/setup-helm@v3
+      with:
+        version: '3.10.0'
+
+    - name: Setup yamllint
+      run: |
+        pip install yamllint
+        yamllint --version
+
+    - name: Validate Kubernetes manifests with Conftest
+      run: |
+        conftest test -p policy manifests/*.yaml --all-namespaces
+
+    - name: Lint Helm charts
+      run: |
+        helm lint charts/*
+
+    - name: Run Trivy config scan
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'config'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-config-results.sarif'
+        severity: 'HIGH,CRITICAL'
+
+    - name: Upload Trivy config scan results
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'trivy-config-results.sarif'
+
+    - name: Yamllint validation
+      run: |
+        yamllint manifests/*.yaml
+        yamllint charts/**/*.yaml
+
+    - name: Run Kubesec security scanner
+      run: |
+        # Install kubesec if not available
+        if ! command -v kubesec &> /dev/null; then
+          curl -L https://github.com/controlplaneio/kubesec/releases/download/v2.11.4/kubesec_linux_amd64.tar.gz -o kubesec.tar.gz
+          tar -xf kubesec.tar.gz
+          chmod +x kubesec
+          sudo mv kubesec /usr/local/bin/
+        fi
+        
+        # Run kubesec on all YAML files
+        for yaml_file in $(find manifests/ -name "*.yaml" -o -name "*.yml"); do
+          echo "Scanning $yaml_file with Kubesec..."
+          kubesec scan "$yaml_file"
+        done
+
+    - name: Run kube-score
+      run: |
+        # Install kube-score if not available
+        if ! command -v kube-score &> /dev/null; then
+          wget https://github.com/zegl/kube-score/releases/download/v1.14.0/kube-score_1.14.0_linux_amd64.tar.gz
+          tar -xf kube-score_1.14.0_linux_amd64.tar.gz
+          chmod +x kube-score
+          sudo mv kube-score /usr/local/bin/
+        fi
+        
+        # Run kube-score on all manifests
+        kube-score score manifests/*.yaml --output-format sarif > kube-score-results.sarif
+
+    - name: Upload kube-score results
+      uses: github/codeql-action/upload-sarif@v2
+      with:
+        sarif_file: 'kube-score-results.sarif'
+
+    - name: Validate with custom script
+      run: |
+        chmod +x validate.sh
+        ./validate.sh
+
+    - name: Security Threshold Check
+      run: |
+        echo "Checking security scan results for threshold violations..."
+        
+        # Check if trivy results file exists and contains critical/high vulnerabilities
+        if [ -f "trivy-config-results.sarif" ]; then
+          CRITICAL_COUNT=$(grep -c '"severity":"CRITICAL"' trivy-config-results.sarif || echo "0")
+          HIGH_COUNT=$(grep -c '"severity":"HIGH"' trivy-config-results.sarif || echo "0")
+          
+          echo "Critical vulnerabilities found: $CRITICAL_COUNT"
+          echo "High vulnerabilities found: $HIGH_COUNT"
+          
+          if [ "$CRITICAL_COUNT" -gt 0 ]; then
+            echo "FAILURE: Critical vulnerabilities detected! Blocking deployment."
+            exit 1
+          fi
+          
+          if [ "$HIGH_COUNT" -gt 5 ]; then
+            echo "FAILURE: Too many high severity vulnerabilities! Blocking deployment."
+            exit 1
+          fi
+          
+          echo "Security scan passed threshold checks"
+        else
+          echo "WARNING: Trivy results file not found"
+        fi
+
+    - name: Quality Gate Check
+      run: |
+        echo "Checking infrastructure quality metrics..."
+        
+        # Check for required security configurations
+        PRIVILEGED_COUNT=$(grep -r "privileged: true" manifests/ --include="*.yaml" --include="*.yml" | wc -l)
+        if [ "$PRIVILEGED_COUNT" -gt 0 ]; then
+          echo "FAILURE: Found privileged containers which violate security policy"
+          exit 1
+        fi
+        
+        # Check for resource limits
+        RESOURCE_LIMITS_MISSING=$(grep -L "resources:" manifests/*.yaml manifests/*.yml || true)
+        if [ -n "$RESOURCE_LIMITS_MISSING" ]; then
+          echo "FAILURE: Missing resource limits in some manifests: $RESOURCE_LIMITS_MISSING"
+          exit 1
+        fi
+        
+        echo "Quality gates passed!"

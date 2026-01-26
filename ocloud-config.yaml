@@ -1,0 +1,115 @@
+# O-Cloud Platform Configuration for Infrastructure Components
+# Defines deployment configurations for infrastructure services on O-Cloud platform
+
+platform:
+  name: O-Cloud
+  api_version: v1
+  region: asia-southeast-1
+  environment: production
+
+infrastructure_deployment:
+  # Configuration for deploying infrastructure components to O-Cloud
+  cluster:
+    name: ocloud-cnf-cluster
+    version: v1.25.0
+    node_pool:
+      min_nodes: 3
+      max_nodes: 10
+      machine_type: standard-4
+      disk_size_gb: 100
+      disk_type: pd-standard
+  
+  networking:
+    vpc_name: ocloud-cnf-vpc
+    subnets:
+      - name: cnf-subnet-1
+        cidr: "10.100.1.0/24"
+        region: asia-southeast-1a
+      - name: cnf-subnet-2
+        cidr: "10.100.2.0/24"
+        region: asia-southeast-1b
+      - name: cnf-subnet-3
+        cidr: "10.100.3.0/24"
+        region: asia-southeast-1c
+    
+    load_balancer:
+      type: external
+      ssl_policy: modern
+      http_redirect_to_https: true
+
+  security:
+    # Security configurations specific to O-Cloud deployment
+    firewall_rules:
+      - name: allow-ssh
+        direction: INGRESS
+        action: ALLOW
+        ranges: ["35.240.0.0/16"]
+        ports: ["22"]
+        protocol: tcp
+      - name: allow-health-checks
+        direction: INGRESS
+        action: ALLOW
+        ranges: ["139.144.0.0/16", "35.191.0.0/16", "209.85.152.0/22", "209.85.204.0/22"]
+        ports: ["80", "443", "8080"]
+        protocol: tcp
+    
+    encryption:
+      default_kms_key: ocloud-cnf-key
+      encrypt_disks: true
+      encrypt_network: true
+
+monitoring:
+  # Monitoring and observability configurations for O-Cloud
+  logging:
+    enable_stackdriver_logging: true
+    log_level: INFO
+    retention_days: 30
+  
+  metrics:
+    enable_prometheus_exporter: true
+    enable_custom_metrics: true
+    collection_interval: 60s
+  
+  alerting:
+    critical_alert_channels:
+      - email: ops-team@example.com
+      - webhook: https://hooks.slack.com/services/XXX
+    notification_preferences:
+      acknowledge_timeout: 300
+      escalation_policy: auto
+
+backup_recovery:
+  # Backup and disaster recovery configurations
+  backup_schedule: "0 2 * * *"
+  backup_location: gs://ocloud-cnf-backups
+  backup_retention: 30d
+  snapshot_schedule: "0 3 * * *"
+  snapshot_retention: 7d
+  
+  disaster_recovery:
+    dr_region: asia-east-1
+    replication_enabled: true
+    failover_time_limit: 300
+
+resource_management:
+  # Resource allocation and management on O-Cloud
+  quotas:
+    cpu_cores: 40
+    memory_gb: 160
+    persistent_disk_gb: 10000
+    load_balancers: 5
+  
+  auto_scaling:
+    cluster_autoscaling: true
+    vertical_pod_autoscaling: true
+    horizontal_pod_autoscaling: true
+
+compliance:
+  # Compliance configurations for O-Cloud deployment
+  audit_logs: true
+  access_transparency: true
+  regulatory_compliance:
+    iso_27001: true
+    soc_2: true
+    gdpr: true
+    hipaa: false

@@ -1,131 +1,109 @@
-# O-Cloud Infrastructure Repository
+# CNF Infrastructure Repository
 
-This repository contains Kubernetes manifests and Helm charts for deploying the O-Cloud application with integrated security scanning and quality gates.
+This repository contains infrastructure-as-code definitions for Cloud-Native Network Functions (CNFs) deployed on the O-Cloud platform. It includes Kubernetes manifests, Helm charts, security policies, and quality gates.
 
-## Contents
+## Overview
 
-The repository is organized into the following directories:
+The CNF Infrastructure repository provides a comprehensive infrastructure setup for deploying and managing CNFs with security, scalability, and reliability in mind. It implements security best practices, quality gates, and monitoring configurations for production-ready deployments.
 
-### 1. Manifests (`manifests/`)
-Contains individual Kubernetes resource files for direct deployment:
+## Features
 
-#### Deployment (`manifests/deployment.yaml`)
-- Deploys the O-Cloud application with 3 replicas
-- Includes liveness and readiness probes that check the `/health` endpoint
-- Sets resource limits (100m CPU, 128Mi memory) and requests (50m CPU, 64Mi memory)
-- Configures the container to expose port 8080
+- **Kubernetes Manifests**: Production-ready Kubernetes deployment configurations
+- **Helm Charts**: Parameterized deployment templates for easy customization
+- **Security Policies**: Conftest policies for validating security configurations
+- **Quality Gates**: Automated validation of infrastructure configurations
+- **CI/CD Integration**: GitHub Actions workflows for automated testing and validation
+- **Monitoring Configuration**: Prometheus and Grafana configurations
+- **O-Cloud Integration**: Specific configurations for the O-Cloud platform
 
-#### Service (`manifests/service.yaml`)
-- Creates a NodePort service to allow external access to the O-Cloud application
-- Maps internal port 8080 to external port 30080
-- Uses selectors to connect to pods with the label `app=cnf-simulator`
+## Directory Structure
 
-#### Network Policy (`manifests/network-policy.yaml`)
-- Implements micro-segmentation security
-- Allows inbound traffic only on port 8080
-- Applies to pods with the label `app=cnf-simulator`
-
-### 2. Helm Charts (`charts/`)
-Contains packaged Helm charts for simplified deployment:
-
-#### O-Cloud Application Chart (`charts/ocloud-app/`)
-- Packaged Helm chart for the O-Cloud application
-- Configurable parameters for easy customization
-- Includes all necessary Kubernetes resources (Deployment, Service, NetworkPolicy)
-- Built with security best practices in mind
-- Integrated security scanning and quality gates configurations
-
-### 3. Scripts (`scripts/`)
-Utility scripts for common operations:
-
-#### Deploy Script (`scripts/deploy-ocloud-app.sh`)
-- Automated deployment script using Helm
-- Handles namespace creation and chart installation
-- Includes validation and status checking
-
-## Security Scanning and Quality Gates
-
-This infrastructure implements comprehensive security scanning and quality gates:
-
-### Security Scanning Configuration
-- Container vulnerability scanning using Trivy
-- Minimum security rating requirements (configurable per environment)
-- Maximum vulnerability count limits
-- Runtime security monitoring
-
-### Quality Gates Configuration
-- Code coverage thresholds (minimum 70% dev, 90% prod)
-- Performance testing with response time and throughput requirements
-- Health checks for liveness and readiness
-- Environment-specific quality requirements
-
-### Environment-Specific Security Settings
-
-#### Development Environment (`values-dev.yaml`)
-- Minimum security rating: "C"
-- Max vulnerabilities: 10
-- Quality gates: Enabled with lower thresholds
-- Performance requirements: Relaxed (1000ms response time, 50 RPS)
-
-#### Production Environment (`values-prod.yaml`)
-- Minimum security rating: "A"
-- Max vulnerabilities: 0 (zero tolerance)
-- Quality gates: Enabled with strictest thresholds
-- Performance requirements: Strict (200ms response time, 200 RPS)
-
-## Deployment Options
-
-### Option 1: Direct Manifests Deployment
-
-To deploy using individual Kubernetes manifests:
-
-```bash
-kubectl apply -f manifests/deployment.yaml
-kubectl apply -f manifests/service.yaml
-kubectl apply -f manifests/network-policy.yaml
+```
+cnf-infra-repo/
+├── manifests/                 # Kubernetes manifests
+│   ├── deployment.yaml       # Main application deployment
+│   ├── service.yaml          # Service definition
+│   ├── network-policy.yaml   # Network policies
+│   └── app-deployment.yaml   # Additional application manifests
+├── charts/                   # Helm charts
+│   └── ocloud-app/          # O-Cloud specific application chart
+│       ├── templates/       # Helm templates
+│       ├── Chart.yaml       # Chart metadata
+│       ├── values.yaml      # Default values
+│       ├── values-dev.yaml  # Development environment values
+│       └── values-prod.yaml # Production environment values
+├── policy/                   # Conftest security policies
+│   └── deployment.rego      # Rego policy for deployment validation
+├── scripts/                  # Utility scripts
+│   ├── deploy-ocloud-app.sh # Deployment script
+│   └── README.md            # Script documentation
+├── .github/workflows/        # CI/CD workflows
+│   └── ci.yaml              # Infrastructure validation workflow
+├── .conftestignore           # Files to ignore during Conftest validation
+├── .gitignore               # Git ignore patterns
+├── kind-cluster-config.yaml # Kind cluster configuration
+├── quality-gates.md         # Documentation for quality gates
+├── validate.sh              # Validation script
+├── container-security.yaml  # Container security configuration
+├── ocloud-config.yaml       # O-Cloud platform configuration
+└── README.md                # This file
 ```
 
-### Option 2: Helm Chart Deployment
+## Security Implementation
 
-To deploy using the Helm chart:
+### Policy Validation
+- Pod security standards compliance
+- Network policy enforcement
+- Resource limit validation
+- Security context requirements
 
-```bash
-# Install the chart directly
-helm install ocloud-app-release charts/ocloud-app --namespace ocloud-apps --create-namespace
+### Quality Gates
+- Automated validation of security configurations
+- Compliance checking against security standards
+- Vulnerability assessment integration
 
-# Or use the deployment script
-./scripts/deploy-ocloud-app.sh
-```
+## Usage
 
-## Accessing the Application
+### Local Development
+1. Clone the repository
+2. Review and customize values in `charts/ocloud-app/values.yaml`
+3. Use the validation script to check configurations:
+   ```bash
+   ./validate.sh
+   ```
 
-Once deployed, the O-Cloud application will be accessible via:
-- Internal cluster: `http://ocloud-app-service:80`
-- External access: `http://<NODE_IP>:30080` (when using NodePort service)
+### Deployment
+1. Set up your Kubernetes cluster with appropriate security configurations
+2. Customize the Helm chart values for your environment
+3. Deploy using Helm:
+   ```bash
+   helm install ocloud-app charts/ocloud-app -f values-prod.yaml
+   ```
 
-## Endpoints
+## Quality Assurance
 
-After deployment, the following endpoints will be available:
-- `/health` - Health check endpoint
-- `/status` - Status information
-- `/config` - Configuration details
-- `/info` - Service information
-- `/security` - Security scan information
-- `/quality` - Quality metrics information
+This repository implements comprehensive quality gates through:
+- Static code analysis of Kubernetes manifests
+- Security policy validation with Conftest
+- Infrastructure scanning with Trivy
+- Custom validation scripts
 
-## Environment-Specific Deployments
+## O-Cloud Platform Integration
 
-This infrastructure supports multiple environments using different value files:
+The infrastructure is specifically configured for the O-Cloud platform with:
+- Region-specific configurations
+- Platform-specific security settings
+- Resource quota management
+- Compliance with O-Cloud policies
 
-- Development: `values-dev.yaml` - Single replica, NodePort service, less restrictive security
-- Production: `values-prod.yaml` - Multiple replicas, LoadBalancer service, enhanced security and autoscaling
+## Contributing
 
-To deploy to different environments:
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes with appropriate tests
+4. Submit a pull request with detailed descriptions
+5. Ensure all quality gates pass
 
-```bash
-# Deploy to development
-helm install ocloud-app-dev charts/ocloud-app -f charts/ocloud-app/values-dev.yaml --namespace ocloud-dev --create-namespace
+## License
 
-# Deploy to production
-helm install ocloud-app-prod charts/ocloud-app -f charts/ocloud-app/values-prod.yaml --namespace ocloud-prod --create-namespace
-```
+This project is licensed under the terms specified in the LICENSE file.

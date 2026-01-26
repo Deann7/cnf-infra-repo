@@ -1,0 +1,98 @@
+# Container Security Configuration for CNF Infrastructure
+# Defines security policies and configurations for container images used in infrastructure
+
+registry:
+  name: ghcr.io
+  organization: deann7-github
+  image_prefix: cnf-infra
+
+security:
+  # Define security scanning policies
+  vulnerability_scanning:
+    enabled: true
+    schedule: weekly
+    severity_thresholds:
+      critical: 0
+      high: 2
+      medium: 5
+    scanners:
+      - trivy
+      - snyk
+  
+  # Image signing and verification
+  image_signing:
+    enabled: true
+    sign_images: true
+    verify_signatures: true
+    cosign:
+      enabled: true
+      keyless: true
+  
+  # Base image policies
+  base_image_policy:
+    allow_only_approved_base_images: true
+    approved_registries:
+      - docker.io/library
+      - gcr.io
+      - quay.io
+    blocked_registries:
+      - none
+    minimum_security_rating: high
+
+image_configuration:
+  # Default security settings for built images
+  security_context:
+    run_as_non_root: true
+    run_as_user: 65532
+    run_as_group: 65532
+    fs_group: 65532
+    allow_privilege_escalation: false
+    privileged: false
+    capabilities:
+      drop:
+        - ALL
+  
+  # Resource constraints
+  resource_limits:
+    cpu: "1000m"
+    memory: "1Gi"
+    ephemeral_storage: "1Gi"
+  
+  # Health checks
+  health_checks:
+    liveness_probe:
+      http_get:
+        path: /health
+        port: 8080
+      initial_delay_seconds: 30
+      period_seconds: 10
+    readiness_probe:
+      http_get:
+        path: /ready
+        port: 8080
+      initial_delay_seconds: 5
+      period_seconds: 5
+
+deployment_security:
+  # Kubernetes deployment security configurations
+  pod_security_standards:
+    # Apply baseline pod security standard
+    level: baseline
+    version: latest
+  
+  network_policies:
+    default_deny_ingress: true
+    default_deny_egress: true
+    allow_dns: true
+  
+  rbac:
+    use_least_privilege: true
+    disable_service_account_token_mount: true
+    restrict_api_access: true
+
+compliance:
+  # Compliance frameworks and standards
+  cis_benchmarks: true
+  nsa_cisa_guidelines: true
+  pci_dss_requirements: false
+  gdpr_compliant: true
