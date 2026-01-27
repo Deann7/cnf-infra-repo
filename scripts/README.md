@@ -1,49 +1,66 @@
-# O-Cloud Infrastructure Scripts
+# Scripts Directory
 
-This directory contains utility scripts for managing O-Cloud infrastructure deployments.
+This directory contains utility scripts for managing and deploying the CNF infrastructure on the O-Cloud platform.
 
 ## Available Scripts
 
 ### deploy-ocloud-app.sh
 
-A script to deploy the O-Cloud application using the Helm chart.
+This script deploys the O-Cloud application using Helm charts with environment-specific configurations.
 
 #### Usage
-
-On Linux/macOS:
 ```bash
-./deploy-ocloud-app.sh [OPTIONS]
+./deploy-ocloud-app.sh [environment]
 ```
 
-On Windows (using Git Bash or WSL):
+Where `[environment]` can be `dev`, `staging`, or `prod`. If not specified, defaults to `dev`.
+
+#### Features
+- Validates configuration files before deployment
+- Applies appropriate Helm values based on environment
+- Monitors deployment status
+- Provides rollback capability in case of failure
+
+#### Prerequisites
+- Helm 3.x
+- kubectl configured with appropriate cluster access
+- Environment-specific values files in the charts directory
+
+### validate.sh
+
+This script validates the infrastructure configurations against security and quality standards.
+
+#### Usage
 ```bash
-bash deploy-ocloud-app.sh [OPTIONS]
+./validate.sh
 ```
 
-#### Options
+#### Features
+- Validates Kubernetes manifest files
+- Checks for security misconfigurations
+- Ensures resource limits are set
+- Verifies security contexts
+- Runs Conftest policy validation
+- Reports compliance status
 
-- `-n, --namespace STRING`: Kubernetes namespace (default: ocloud-apps)
-- `-r, --release STRING`: Helm release name (default: ocloud-app-release)
-- `-i, --image STRING`: Docker image repository (default: localhost/ocloud-app)
-- `-t, --tag STRING`: Docker image tag (default: latest)
-- `-h, --help`: Show help message
+#### Prerequisites
+- yq for YAML processing
+- conftest for policy validation
+- kubectl for Kubernetes access
+- helm for chart validation
 
-#### Examples
+## Security Considerations
 
-Deploy with default settings:
-```bash
-./deploy-ocloud-app.sh
-```
+All scripts follow security best practices:
+- Input validation where applicable
+- Secure temporary file handling
+- Proper error handling
+- Minimal permissions required
 
-Deploy to a specific namespace with a custom image:
-```bash
-./deploy-ocloud-app.sh -n production -i myregistry/myapp -t v1.2.3
-```
+## Maintenance
 
-## Requirements
-
-- Helm 3.0+
-- kubectl
-- Access to a Kubernetes cluster
-
-For Windows users, it's recommended to run these scripts in Git Bash, WSL, or PowerShell with appropriate Unix command-line tools installed.
+Scripts should be reviewed regularly for:
+- Security vulnerabilities
+- Compatibility with new versions of dependencies
+- Performance improvements
+- Feature enhancements based on operational needs

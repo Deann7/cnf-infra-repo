@@ -1,116 +1,199 @@
 #!/bin/bash
 
-# Script to deploy O-Cloud application using Helm chart
-# This script assumes you have already built your Docker image and loaded it into your Kubernetes cluster
+# Deployment script for O-Cloud Application
+# This script handles the deployment of the O-Cloud application using Helm
 
 set -e  # Exit immediately if a command exits with a non-zero status
 
-echo "🚀 Starting O-Cloud application deployment..."
+# Default values
+ENVIRONMENT="dev"
+NAMESPACE="default"
+TIMEOUT="600s"
+DRY_RUN=false
 
-# Check if Helm is installed
-if ! command -v helm &> /dev/null; then
-    echo "❌ Helm is not installed. Please install Helm first."
+# Function to print status
+print_status() {
+    echo -e "\033[1;34m[INFO]\033[0m $1"
+}
+
+# Function to print success
+print_success() {
+    echo -e "\033[1;32m[SUCCESS]\033[0m $1"
+}
+
+# Function to print warning
+print_warning() {
+    echo -e "\033[1;33m[WARNING]\033[0m $1"
+}
+
+# Function to print error
+print_error() {
+    echo -e "\033[1;31m[ERROR]\033[0m $1"
+}
+
+# Print usage information
+usage() {
+    echo "Usage: $0 [options]"
+    echo "Options:"
+    echo "  -e, --environment ENV    Set environment (dev, staging, prod) [default: dev]"
+    echo "  -n, --namespace NS       Set namespace [default: default]"
+    echo "  -t, --timeout TIMEOUT   Set deployment timeout [default: 600s]"
+    echo "  --dry-run               Perform a dry run without actual deployment"
+    echo "  -h, --help              Show this help message"
     exit 1
-fi
-
-# Check if kubectl is installed and connected to a cluster
-if ! command -v kubectl &> /dev/null; then
-    echo "❌ kubectl is not installed. Please install kubectl first."
-    exit 1
-fi
-
-# Check if we're connected to a cluster
-if ! kubectl cluster-info &> /dev/null; then
-    echo "❌ No Kubernetes cluster detected. Please connect to a cluster first."
-    exit 1
-fi
-
-# Set default values
-NAMESPACE="ocloud-apps"
-RELEASE_NAME="ocloud-app-release"
-IMAGE_REPO="ghcr.io/Deann7/cnf-simulator"
-IMAGE_TAG="latest"
+}
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
+        -e|--environment)
+            ENVIRONMENT="$2"
+            shift 2
+            ;;
         -n|--namespace)
             NAMESPACE="$2"
             shift 2
             ;;
-        -r|--release)
-            RELEASE_NAME="$2"
+        -t|--timeout)
+            TIMEOUT="$2"
             shift 2
             ;;
-        -i|--image)
-            IMAGE_REPO="$2"
-            shift 2
-            ;;
-        -t|--tag)
-            IMAGE_TAG="$2"
-            shift 2
+        --dry-run)
+            DRY_RUN=true
+            shift
             ;;
         -h|--help)
-            echo "Usage: $0 [OPTIONS]"
-            echo "Deploy O-Cloud application using Helm"
-            echo ""
-            echo "Options:"
-            echo "  -n, --namespace STRING   Kubernetes namespace (default: ocloud-apps)"
-            echo "  -r, --release STRING     Helm release name (default: ocloud-app-release)"
-            echo "  -i, --image STRING       Docker image repository (default: ghcr.io/Deann7/cnf-simulator)"
-            echo "  -t, --tag STRING         Docker image tag (default: latest)"
-            echo "  -h, --help               Show this help message"
-            exit 0
+            usage
             ;;
         *)
-            echo "Unknown option: $1"
-            exit 1
+            print_error "Unknown option: $1"
+            usage
             ;;
     esac
 done
 
-echo "🔧 Using namespace: $NAMESPACE"
-echo "🔧 Using release name: $RELEASE_NAME"
-echo "🔧 Using image: $IMAGE_REPO:$IMAGE_TAG"
+# Validate environment
+case $ENVIRONMENT in
+    dev|staging|prod)
+        ;;
+    *)
+        print_error "Invalid environment: $ENVIRONMENT. Must be dev, staging, or prod."
+        exit 1
+        ;;
+esac
 
-# Create namespace if it doesn't exist
-if ! kubectl get namespace $NAMESPACE &> /dev/null; then
-    echo "📦 Creating namespace: $NAMESPACE"
-    kubectl create namespace $NAMESPACE
-else
-    echo "✅ Namespace $NAMESPACE already exists"
+print_status "Starting deployment for environment: $ENVIRONMENT"
+print_status "Namespace: $NAMESPACE"
+print_status "Timeout: $TIMEOUT"
+
+if [[ "$DRY_RUN" == "true" ]]; then
+    print_warning "DRY RUN MODE: No actual deployment will occur"
 fi
 
-# Package and install the Helm chart
-echo "🔨 Packaging and installing Helm chart..."
-helm upgrade --install $RELEASE_NAME ./charts/ocloud-app \
-    --namespace $NAMESPACE \
-    --set image.repository=$IMAGE_REPO \
-    --set image.tag=$IMAGE_TAG \
-    --set service.targetPort=8080 \
-    --create-namespace
+# Validate prerequisites
+print_status "Validating prerequisites..."
 
-# Wait for deployment to be ready
-echo "⏳ Waiting for deployment to be ready..."
-kubectl wait --for=condition=available deployment/ocloud-app-$RELEASE_NAME \
-    --namespace $NAMESPACE \
-    --timeout=300s
+if ! command -v helm &> /dev/null; then
+    print_error "helm is not installed"
+    exit 1
+fi
 
-echo "✅ O-Cloud application deployed successfully!"
-echo "📊 Release: $RELEASE_NAME"
-echo "📊 Namespace: $NAMESPACE"
-echo "📊 Image: $IMAGE_REPO:$IMAGE_TAG"
+if ! command -v kubectl &> /dev/null; then
+    print_error "kubectl is not installed"
+    exit 1
+fi
 
-# Display service information
-echo ""
-echo "📋 Service Information:"
-kubectl get service ocloud-app-$RELEASE_NAME --namespace $NAMESPACE
+# Run validation script first
+print_status "Running infrastructure validation..."
+if [[ "$DRY_RUN" == "false" ]]; then
+    if ! ./validate.sh; then
+        print_error "Validation failed. Aborting deployment."
+        exit 1
+    fi
+    print_success "Validation passed"
+fi
 
-echo ""
-echo "💡 To access the application, you can port-forward:"
-echo "   kubectl port-forward -n $NAMESPACE svc/ocloud-app-$RELEASE_NAME 8080:80"
+# Determine values file based on environment
+VALUES_FILE="charts/ocloud-app/values.yaml"
+ENV_VALUES_FILE="charts/ocloud-app/values-$ENVIRONMENT.yaml"
 
-echo ""
-echo "🔍 To check the status of your deployment:"
-echo "   kubectl get pods -n $NAMESPACE"
-echo "   helm status $RELEASE_NAME -n $NAMESPACE"
+if [[ -f "$ENV_VALUES_FILE" ]]; then
+    VALUES_FILE="$ENV_VALUES_FILE"
+    print_status "Using environment-specific values file: $VALUES_FILE"
+else
+    print_warning "Environment-specific values file not found: $ENV_VALUES_FILE"
+    print_status "Using default values file: $VALUES_FILE"
+fi
+
+# Create namespace if it doesn't exist
+if [[ "$DRY_RUN" == "false" ]]; then
+    if ! kubectl get namespace "$NAMESPACE" &> /dev/null; then
+        print_status "Creating namespace: $NAMESPACE"
+        kubectl create namespace "$NAMESPACE"
+    fi
+fi
+
+# Prepare extra values based on environment
+EXTRA_VALUES=""
+case $ENVIRONMENT in
+    prod)
+        EXTRA_VALUES="--set replicaCount=3 --set resources.requests.cpu=500m --set resources.requests.memory=1Gi --set resources.limits.cpu=1000m --set resources.limits.memory=2Gi"
+        ;;
+    staging)
+        EXTRA_VALUES="--set replicaCount=2 --set resources.requests.cpu=250m --set resources.requests.memory=512Mi --set resources.limits.cpu=500m --set resources.limits.memory=1Gi"
+        ;;
+    dev)
+        EXTRA_VALUES="--set replicaCount=1 --set resources.requests.cpu=100m --set resources.requests.memory=128Mi --set resources.limits.cpu=200m --set resources.limits.memory=256Mi"
+        ;;
+esac
+
+# Perform the deployment
+DEPLOYMENT_NAME="ocloud-app-$ENVIRONMENT"
+
+print_status "Deploying application: $DEPLOYMENT_NAME"
+
+HELM_COMMAND="helm upgrade --install $DEPLOYMENT_NAME charts/ocloud-app -f $VALUES_FILE --namespace $NAMESPACE --timeout $TIMEOUT $EXTRA_VALUES --wait"
+
+if [[ "$DRY_RUN" == "true" ]]; then
+    print_status "Would execute: $HELM_COMMAND"
+else
+    print_status "Executing: $HELM_COMMAND"
+    eval $HELM_COMMAND
+    
+    if [[ $? -ne 0 ]]; then
+        print_error "Helm deployment failed"
+        exit 1
+    fi
+    
+    print_success "Helm deployment completed"
+fi
+
+# Verify deployment status
+if [[ "$DRY_RUN" == "false" ]]; then
+    print_status "Verifying deployment status..."
+    
+    # Wait for pods to be ready
+    PODS=$(kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/name=ocloud-app -o jsonpath='{.items[*].metadata.name}')
+    
+    for pod in $PODS; do
+        print_status "Waiting for pod $pod to be ready..."
+        kubectl wait --for=condition=Ready pod/"$pod" -n "$NAMESPACE" --timeout="$TIMEOUT"
+    done
+    
+    print_success "All pods are ready"
+    
+    # Get service information
+    SERVICES=$(kubectl get svc -n "$NAMESPACE" -l app.kubernetes.io/name=ocloud-app -o jsonpath='{.items[*].metadata.name}')
+    for service in $SERVICES; do
+        SERVICE_INFO=$(kubectl get svc "$service" -n "$NAMESPACE" -o wide)
+        print_status "Service information for $service:\n$SERVICE_INFO"
+    done
+fi
+
+# Display deployment summary
+print_status "Deployment Summary:"
+if [[ "$DRY_RUN" == "false" ]]; then
+    kubectl get pods,services,ingresses -n "$NAMESPACE" -l app.kubernetes.io/name=ocloud-app
+fi
+
+print_success "Deployment completed successfully for environment: $ENVIRONMENT"

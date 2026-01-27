@@ -1,38 +1,72 @@
-# Quality Gates for Infrastructure as Code
+# Quality Gates for CNF Infrastructure
 
-This document outlines the quality gates implemented for the cnf-infra-repo to ensure high-quality, secure, and compliant Kubernetes infrastructure.
+This document outlines the quality gates implemented in the CNF Infrastructure repository to ensure security, reliability, and performance standards.
 
-## Quality Gate Components
+## Security Quality Gates
 
-### 1. Policy Validation with Conftest
-We use Conftest with Rego policies to validate Kubernetes manifests against security and best practice policies.
+### Vulnerability Scanning
+- No critical vulnerabilities allowed
+- Maximum 5 high severity vulnerabilities
+- All medium and low vulnerabilities must be documented with remediation plans
 
-#### Policies Implemented
-- Deployments must have securityContext defined at pod level
-- Deployments must have securityContext defined at container level
-- Deployments must have resource limits defined
-- Containers must have resource limits defined by name
+### Policy Compliance
+- All Kubernetes manifests must pass Conftest validation
+- Pod Security Standards compliance (baseline level)
+- Network policies must be defined for all deployments
+- Resource limits must be specified for all containers
 
-### 2. Helm Chart Validation
-Helm lint is used to validate Helm charts for common issues and best practices.
+## Code Quality Gates
 
-### 3. Security Checks
-- Verification that no privileged containers are deployed
-- Verification that resource limits are defined for all deployments
+### Static Analysis
+- All code must pass linting checks
+- Security scanning must show acceptable risk levels
+- Configuration files must be valid YAML/JSON
 
-## Implementation
+### Testing Requirements
+- Unit tests must achieve 80% code coverage
+- Integration tests must pass
+- Security tests must pass
 
-### Running Quality Gates Locally
-```bash
-./validate.sh
-```
+## Performance Quality Gates
 
-### GitHub Actions Integration
-Quality gates are integrated into the CI/CD pipeline to prevent deployment of non-compliant infrastructure.
+### Resource Constraints
+- CPU and memory limits must be set for all deployments
+- Resource requests must be reasonable
+- Horizontal Pod Autoscaler configurations must be included where appropriate
 
-## Quality Gate Criteria
+## Deployment Quality Gates
 
-- All Kubernetes manifests must pass Conftest policy validation
-- All Helm charts must pass helm lint validation
-- No privileged containers allowed
-- All deployments must have resource limits defined
+### Pre-deployment Checks
+- All dependencies must be resolved
+- Configuration values must be validated
+- Security scanning results must be within acceptable thresholds
+
+### Post-deployment Validation
+- All pods must be running and ready
+- Health checks must pass
+- Basic functionality tests must succeed
+
+## Quality Gate Enforcement
+
+Quality gates are enforced through:
+- GitHub Actions CI/CD pipelines
+- Automated scanning tools (Trivy, Kubesec, kube-score)
+- Policy validation engines (Conftest)
+- Custom validation scripts
+
+## Remediation Process
+
+When quality gates fail:
+1. Identify the cause of the failure
+2. Implement necessary fixes
+3. Re-run validation tests
+4. Document any exceptions if required
+5. Obtain approval for any deviations from standards
+
+## Reporting and Monitoring
+
+Quality metrics are tracked and reported through:
+- CI/CD pipeline logs
+- Security scanning reports
+- Quality dashboard in Grafana
+- Automated alerts for gate failures
