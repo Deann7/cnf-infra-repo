@@ -1,120 +1,141 @@
 # CNF Infrastructure Repository
 
-This repository contains infrastructure-as-code definitions for Cloud-Native Network Functions (CNFs) deployed on the O-Cloud platform. It includes Kubernetes manifests, Helm charts, security policies, and quality gates.
+This repository contains the infrastructure-as-code for deploying Cloud Native Network Functions (CNFs) to Kubernetes clusters. It includes deployment manifests, Helm charts, and CI/CD pipeline configurations.
 
-## Overview
-
-The CNF Infrastructure repository provides a comprehensive infrastructure setup for deploying and managing CNFs with security, scalability, and reliability in mind. It implements security best practices, quality gates, and monitoring configurations for production-ready deployments.
-
-## Features
-
-- **Kubernetes Manifests**: Production-ready Kubernetes deployment configurations
-- **Helm Charts**: Parameterized deployment templates for easy customization
-- **Security Policies**: Conftest policies for validating security configurations
-- **Quality Gates**: Automated validation of infrastructure configurations
-- **CI/CD Integration**: GitHub Actions workflows for automated testing and validation
-- **Monitoring Configuration**: Prometheus and Grafana configurations
-- **O-Cloud Integration**: Specific configurations for the O-Cloud platform
-
-## Directory Structure
+## Project Structure
 
 ```
 cnf-infra-repo/
-├── manifests/                 # Kubernetes manifests
-│   ├── deployment.yaml       # Main application deployment
-│   ├── service.yaml          # Service definition
-│   ├── network-policy.yaml   # Network policies
-│   └── app-deployment.yaml   # Additional application manifests
-├── charts/                   # Helm charts
-│   └── ocloud-app/          # O-Cloud specific application chart
-│       ├── templates/       # Helm templates
-│       ├── Chart.yaml       # Chart metadata
-│       ├── values.yaml      # Default values
-│       ├── values-dev.yaml  # Development environment values
-│       └── values-prod.yaml # Production environment values
-├── policy/                   # Conftest security policies
-│   └── deployment.rego      # Rego policy for deployment validation
-├── scripts/                  # Utility scripts
-│   ├── deploy-ocloud-app.sh # Deployment script
-│   └── README.md            # Script documentation
-├── .github/workflows/        # CI/CD workflows
-│   └── ci.yaml              # Infrastructure validation workflow
-├── .conftestignore           # Files to ignore during Conftest validation
-├── .gitignore               # Git ignore patterns
-├── kind-cluster-config.yaml # Kind cluster configuration
-├── quality-gates.md         # Documentation for quality gates
-├── validate.sh              # Validation script
-├── container-security.yaml  # Container security configuration
-├── ocloud-config.yaml       # O-Cloud platform configuration
-└── README.md                # This file
+├── .github/
+│   └── workflows/
+│       ├── ci.yaml         # Continuous Integration pipeline
+│       └── cd.yaml         # Continuous Deployment pipeline
+├── charts/
+│   ├── Chart.yaml        # Helm chart definition
+│   ├── values.yaml       # Default values for the Helm chart
+│   └── templates/        # Kubernetes manifest templates
+│       ├── _helpers.tpl
+│       ├── deployment.yaml
+│       └── service.yaml
+├── scripts/
+│   ├── deploy-ocloud-app.sh      # Deployment script
+│   └── deployment-strategies.sh  # Deployment strategy examples
+└── README.md
 ```
 
-## Security Implementation
+## CD Pipeline Implementation
 
-### Policy Validation
-- Pod security standards compliance
-- Network policy enforcement
-- Resource limit validation
-- Security context requirements
+The continuous deployment pipeline automates the deployment of applications to Kubernetes clusters. Key components include:
 
-### Quality Gates
-- Automated validation of security configurations
-- Compliance checking against security standards
-- Vulnerability assessment integration
+### 1. Image Pulling from Registry
+- The pipeline pulls the latest container image from GitHub Container Registry (GHCR)
+- Authentication is handled securely using GitHub Actions secrets
+- Images are tagged with commit SHA for traceability
 
-## Usage
+### 2. Helm Install/Upgrade Strategy
+- Uses Helm for package management and deployment
+- Implements upgrade strategy to update existing releases
+- Creates namespace if it doesn't exist
+- Includes timeout and wait conditions for reliable deployments
 
-### Local Development
-1. Clone the repository
-2. Review and customize values in `charts/ocloud-app/values.yaml`
-3. Use the validation script to check configurations:
-   ```bash
-   ./validate.sh
-   ```
+### 3. Verification Mechanisms
+- Pod readiness and liveness probes
+- Health check endpoints
+- Rollout status verification
+- Service connectivity tests
 
-### Deployment
-1. Set up your Kubernetes cluster with appropriate security configurations
-2. Customize the Helm chart values for your environment
-3. Deploy using Helm:
-   ```bash
-   helm install ocloud-app charts/ocloud-app -f values-prod.yaml
-   ```
+### 4. Deployment Strategies
+The repository includes examples of different deployment strategies:
 
-## Quality Assurance
+- **Rolling Updates**: Gradually replaces old pods with new ones (zero downtime)
+- **Blue-Green Deployments**: Maintains two identical production environments
+- **Canary Deployments**: Gradually shifts traffic to new versions
 
-This repository implements comprehensive quality gates through:
-- Static code analysis of Kubernetes manifests
-- Security policy validation with Conftest
-- Infrastructure scanning with Trivy
-- Custom validation scripts
+## Kubernetes Deployment Strategies
 
-## O-Cloud Platform Integration
+### Rolling Updates
+Default Kubernetes deployment strategy that gradually replaces instances with new ones, ensuring zero downtime.
 
-The infrastructure is specifically configured for the O-Cloud platform with:
-- Region-specific configurations
-- Platform-specific security settings
-- Resource quota management
-- Compliance with O-Cloud policies
+### Blue-Green Deployment
+Maintains two identical production environments (blue and green). Traffic is switched from one environment to another during deployment.
 
-## Contributing
+### Canary Deployment
+Deploys new version to a subset of users first, then gradually expands to all users after validation.
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes with appropriate tests
-4. Submit a pull request with detailed descriptions
-5. Ensure all quality gates pass
+## Security Considerations
+- Secrets are managed securely using Kubernetes secrets
+- RBAC is configured for minimal required permissions
+- Images are scanned for vulnerabilities before deployment
+- Network policies restrict unnecessary traffic
 
-## Additional Features
+## Getting Started
 
-This infrastructure repository now includes:
-- Comprehensive quality gates documentation
-- Validation scripts for infrastructure configurations
-- Deployment scripts for O-Cloud platform
-- Security policies and compliance configurations
-- Monitoring and alerting configurations
-- Container security policies
-- O-Cloud platform integration
+### Prerequisites
+- Kubernetes cluster access
+- Helm 3.x installed
+- kubectl configured
 
-## License
+### Deployment Commands
+```bash
+# Deploy using Helm
+helm install ocloud-app ./charts \
+  --set image.repository=ghcr.io/username/cnf-app \
+  --set image.tag=v1.0.0 \
+  --namespace ocloud \
+  --create-namespace
 
-This project is licensed under the terms specified in the LICENSE file.
+# Upgrade existing deployment
+helm upgrade ocloud-app ./charts \
+  --set image.repository=ghcr.io/username/cnf-app \
+  --set image.tag=v2.0.0 \
+  --namespace ocloud
+
+# Verify deployment
+kubectl rollout status deployment/ocloud-app -n ocloud
+```
+
+### Deployment Verification
+After deployment, verify the application status:
+```bash
+# Check pods
+kubectl get pods -n ocloud
+
+# Check services
+kubectl get svc -n ocloud
+
+# Check deployment status
+kubectl rollout status deployment/ocloud-app -n ocloud
+
+# View logs
+kubectl logs -l app.kubernetes.io/name=ocloud-app -n ocloud
+```
+
+## Pipeline Configuration
+
+The CD pipeline is configured in `.github/workflows/cd.yaml` and includes:
+
+1. **Authentication**: AWS credentials for EKS access and GHCR for image pulling
+2. **Image Pulling**: Pulls latest image from container registry
+3. **Helm Deployment**: Installs/updates application using Helm
+4. **Verification**: Checks deployment status and runs health checks
+5. **Notifications**: Sends success/failure notifications to Slack
+6. **Rollback**: Automatic rollback on deployment failure
+
+## Troubleshooting
+
+### Common Issues
+- **Image Pull Errors**: Verify registry authentication and image availability
+- **RBAC Errors**: Check service account permissions
+- **Health Check Failures**: Validate application readiness/liveness probes
+- **Timeout Errors**: Increase deployment timeouts if needed
+
+### Debugging Commands
+```bash
+# Check deployment events
+kubectl describe deployment ocloud-app -n ocloud
+
+# Check pod logs
+kubectl logs -l app.kubernetes.io/name=ocloud-app -n ocloud
+
+# Check Helm release status
+helm status ocloud-app -n ocloud

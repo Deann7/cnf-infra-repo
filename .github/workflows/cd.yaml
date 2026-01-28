@@ -1,0 +1,106 @@
+name: CD Pipeline - Deploy to Kubernetes
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'charts/**'
+
+env:
+  REGISTRY: ghcr.io/${{ github.repository_owner }}
+  IMAGE_NAME: ${{ github.event.repository.name }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v3
+        with:
+          version: 'latest'
+
+      # Configure AWS credentials for EKS access (or your cloud provider)
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-west-2
+
+      # Get K8s context
+      - name: Get K8s Context
+        run: |
+          aws eks --region us-west-2 update-kubeconfig --name ocloud-cluster
+          kubectl config current-context
+
+      # Pull latest image from registry
+      - name: Pull Image from Registry
+        run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+
+      # Deploy using Helm
+      - name: Helm Install/Upgrade
+        run: |
+          cd charts
+          helm upgrade --install ocloud-app . \
+            --set image.repository=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }} \
+            --set image.tag=${{ github.sha }} \
+            --set replicaCount=3 \
+            --namespace ocloud \
+            --create-namespace \
+            --wait \
+            --timeout=10m
+
+      # Verify deployment
+      - name: Verify Deployment
+        run: |
+          kubectl rollout status deployment/ocloud-app -n ocloud --timeout=5m
+          kubectl get pods -n ocloud
+          kubectl get services -n ocloud
+
+      # Run health checks
+      - name: Health Check
+        run: |
+          sleep 30  # Allow time for pods to be ready
+          kubectl get pods -n ocloud
+          kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=ocloud-app -n ocloud --timeout=5m
+          
+          # Test service connectivity
+          export SERVICE_IP=$(kubectl get svc ocloud-app -n ocloud -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+          if [ ! -z "$SERVICE_IP" ]; then
+            curl -f http://$SERVICE_IP/health || exit 1
+          fi
+
+      # Slack notification
+      - name: Notify Success
+        if: success()
+        run: |
+          curl -X POST -H 'Content-type: application/json' \
+          --data '{"text":"✅ Deployment successful! App deployed to Kubernetes cluster"}' \
+          ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      # Rollback on failure
+      - name: Rollback on Failure
+        if: failure()
+        run: |
+          echo "Deployment failed, initiating rollback..."
+          helm rollback ocloud-app --namespace ocloud
+          
+          curl -X POST -H 'Content-type: application/json' \
+          --data '{"text":"❌ Deployment failed! Rollback initiated"}' \
+          ${{ secrets.SLACK_WEBHOOK_URL }}
