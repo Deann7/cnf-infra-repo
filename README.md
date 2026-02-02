@@ -68,6 +68,35 @@ Deploys new version to a subset of users first, then gradually expands to all us
 - Images are scanned for vulnerabilities before deployment
 - Network policies restrict unnecessary traffic
 
+## Week 4: Observability, Reliability & Final Integration
+
+As part of Week 4 studies, we've enhanced the deployment with production-ready observability and reliability mechanisms:
+
+### Health Probes
+- **Liveness Probes**: Detect when an application needs restart via `/health` endpoint
+- **Readiness Probes**: Determine when an application is ready to serve traffic via `/ready` endpoint
+- Proper configuration prevents traffic from being sent to unready or unhealthy pods
+
+### Deployment Verification
+- Enhanced verification steps in CD pipeline after deployment
+- Automated checks for pod status and service accessibility
+- Integration with `kubectl rollout status` for comprehensive validation
+
+### Observability
+- Built-in health and readiness endpoints in the application
+- Support for basic monitoring through kubectl logs
+- Metrics endpoints for application health monitoring
+
+### Governance & Control
+- Branch protection rules for main branch
+- Manual approval steps in CD pipelines
+- Protected environments for sensitive deployments
+
+### End-to-End Validation
+- Complete flow verification: git push → CI build → test → scan → push image → CD deploy → verify → running service
+- Full pipeline run without manual interventions
+- Production-readiness validation
+
 ## Getting Started
 
 ### Prerequisites

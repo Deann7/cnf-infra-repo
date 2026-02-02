@@ -1,66 +1,44 @@
 # Scripts Directory
 
-This directory contains utility scripts for managing and deploying the CNF infrastructure on the O-Cloud platform.
+This directory contains various utility scripts for managing and operating the O-Cloud infrastructure.
 
 ## Available Scripts
 
-### deploy-ocloud-app.sh
+### deployment-health-check.sh
+A bash script to verify CNF deployment health and readiness. This script checks that pods are running and ready, and validates health endpoints.
 
-This script deploys the O-Cloud application using Helm charts with environment-specific configurations.
-
-#### Usage
+**Usage:**
 ```bash
-./deploy-ocloud-app.sh [environment]
+./deployment-health-check.sh [namespace] [deployment-name] [timeout]
 ```
 
-Where `[environment]` can be `dev`, `staging`, or `prod`. If not specified, defaults to `dev`.
+**Parameters:**
+- `namespace`: Kubernetes namespace (default: default)
+- `deployment-name`: Name of the deployment to check (default: cnf-app-deployment)
+- `timeout`: Timeout in seconds (default: 300)
 
-#### Features
-- Validates configuration files before deployment
-- Applies appropriate Helm values based on environment
-- Monitors deployment status
-- Provides rollback capability in case of failure
+### deployment-health-check.ps1
+A PowerShell equivalent of the bash script for Windows environments.
 
-#### Prerequisites
-- Helm 3.x
-- kubectl configured with appropriate cluster access
-- Environment-specific values files in the charts directory
-
-### validate.sh
-
-This script validates the infrastructure configurations against security and quality standards.
-
-#### Usage
-```bash
-./validate.sh
+**Usage:**
+```powershell
+.\deployment-health-check.ps1 -Namespace "default" -DeploymentName "cnf-app-deployment" -Timeout 300
 ```
 
-#### Features
-- Validates Kubernetes manifest files
-- Checks for security misconfigurations
-- Ensures resource limits are set
-- Verifies security contexts
-- Runs Conftest policy validation
-- Reports compliance status
+### deployment-verification.sh
+Verifies that deployments are successful and running as expected.
 
-#### Prerequisites
-- yq for YAML processing
-- conftest for policy validation
-- kubectl for Kubernetes access
-- helm for chart validation
+### deployment-strategies.sh
+Implements different deployment strategies (rolling, blue-green, canary).
 
-## Security Considerations
+### helm-rollback-mechanism.sh
+Handles rollback procedures for Helm releases.
 
-All scripts follow security best practices:
-- Input validation where applicable
-- Secure temporary file handling
-- Proper error handling
-- Minimal permissions required
+## Dependencies
 
-## Maintenance
+- kubectl must be installed and configured
+- Appropriate permissions to access Kubernetes resources in the target namespace
 
-Scripts should be reviewed regularly for:
-- Security vulnerabilities
-- Compatibility with new versions of dependencies
-- Performance improvements
-- Feature enhancements based on operational needs
+## Notes
+
+These scripts are designed to be used in CI/CD pipelines and for manual verification of deployments. Make sure to configure appropriate RBAC permissions for the service accounts running these scripts in your Kubernetes cluster.

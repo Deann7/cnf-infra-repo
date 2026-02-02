@@ -72,7 +72,7 @@ jobs:
           kubectl rollout status deployment/ocloud-app -n ocloud --timeout=5m
           kubectl get pods -n ocloud
           kubectl get services -n ocloud
-
+      
       # Run health checks
       - name: Health Check
         run: |
@@ -85,6 +85,37 @@ jobs:
           if [ ! -z "$SERVICE_IP" ]; then
             curl -f http://$SERVICE_IP/health || exit 1
           fi
+      
+      # Post-deploy verification with readiness checks
+      - name: Post-Deploy Verification
+        run: |
+          # Verify pod status (Running, Ready=True)
+          echo "Checking pod status..."
+          kubectl get pods -n ocloud -o wide
+          
+          # Check that pods are actually ready
+          READY_PODS=$(kubectl get pods -n ocloud -l app.kubernetes.io/name=ocloud-app -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.status.containerStatuses[0].ready}{"\n"}{end}' | grep -c "true")
+          TOTAL_PODS=$(kubectl get pods -n ocloud -l app.kubernetes.io/name=ocloud-app --no-headers | wc -l)
+          
+          echo "Total pods: $TOTAL_PODS"
+          echo "Ready pods: $READY_PODS"
+          
+          if [ "$READY_PODS" -ne "$TOTAL_PODS" ]; then
+            echo "Error: Not all pods are ready!"
+            kubectl describe pods -n ocloud -l app.kubernetes.io/name=ocloud-app
+            exit 1
+          fi
+          
+          # Verify readiness endpoint
+          echo "Testing readiness endpoint..."
+          POD_NAME=$(kubectl get pods -n ocloud -l app.kubernetes.io/name=ocloud-app -o jsonpath='{.items[0].metadata.name}')
+          kubectl exec $POD_NAME -n ocloud -c ocloud-app -- wget -qO- localhost:8080/ready
+          
+          # Verify liveness endpoint
+          echo "Testing liveness endpoint..."
+          kubectl exec $POD_NAME -n ocloud -c ocloud-app -- wget -qO- localhost:8080/health
+          
+          echo "All post-deploy verifications passed!"
 
       # Slack notification
       - name: Notify Success
