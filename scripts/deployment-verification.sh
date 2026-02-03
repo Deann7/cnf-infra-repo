@@ -160,6 +160,51 @@ verify_service_accessibility() {
     return 0
 }
 
+# Function to verify comprehensive API endpoints
+verify_api_endpoints() {
+    print_status "Verifying comprehensive API endpoints for $APP_NAME..."
+    
+    # Get a pod name for testing
+    local test_pod=$(kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/name="$APP_NAME" -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
+    if [ -z "$test_pod" ]; then
+        print_error "No pods found for API endpoint testing"
+        return 1
+    fi
+    
+    print_status "Testing API endpoints on pod: $test_pod"
+    
+    # Test all major endpoints
+    local endpoints=("/health" "/ready" "/status" "/info" "/security" "/config")
+    local all_endpoints_ok=true
+    
+    for endpoint in "${endpoints[@]}"; do
+        print_status "Testing endpoint: $endpoint"
+        if kubectl exec "$test_pod" -n "$NAMESPACE" -- timeout 10 sh -c "curl -sf http://localhost:$HEALTH_PORT$endpoint" &> /dev/null; then
+            print_success "Endpoint $endpoint responded successfully"
+        else
+            print_error "Endpoint $endpoint failed to respond"
+            all_endpoints_ok=false
+        fi
+    done
+    
+    # Specific validation for status endpoint response
+    print_status "Validating status endpoint response format..."
+    local status_response=$(kubectl exec "$test_pod" -n "$NAMESPACE" -- timeout 10 sh -c "curl -s http://localhost:$HEALTH_PORT/status" 2>/dev/null)
+    if echo "$status_response" | grep -q '"validation_passed"'; then
+        print_success "Status endpoint contains validation_passed field"
+    else
+        print_warning "Status endpoint may not contain expected validation fields"
+    fi
+    
+    if [ "$all_endpoints_ok" = true ]; then
+        print_success "All API endpoints verification passed"
+        return 0
+    else
+        print_error "Some API endpoints failed verification"
+        return 1
+    fi
+}
+
 # Function to verify application functionality
 verify_application_functionality() {
     print_status "Verifying application functionality for $APP_NAME..."
@@ -200,6 +245,20 @@ verify_application_functionality() {
             print_success "Application readiness check passed"
         else
             print_status "Application readiness endpoint not available or not ready"
+        fi
+        
+        # Check status endpoint for comprehensive validation
+        if kubectl exec "$app_ready_check" -n "$NAMESPACE" -- timeout 10 sh -c "curl -f http://localhost:$HEALTH_PORT/status" &> /dev/null; then
+            print_success "Application status endpoint check passed"
+        else
+            print_status "Application status endpoint not available"
+        fi
+        
+        # Check info endpoint for service information
+        if kubectl exec "$app_ready_check" -n "$NAMESPACE" -- timeout 10 sh -c "curl -f http://localhost:$HEALTH_PORT/info" &> /dev/null; then
+            print_success "Application info endpoint check passed"
+        else
+            print_status "Application info endpoint not available"
         fi
     fi
     
@@ -243,6 +302,12 @@ run_comprehensive_verification() {
     # Run service accessibility verification
     ((total_tests++))
     if verify_service_accessibility; then
+        ((passed_tests++))
+    fi
+    
+    # Run API endpoints verification
+    ((total_tests++))
+    if verify_api_endpoints; then
         ((passed_tests++))
     fi
     
@@ -292,6 +357,7 @@ usage() {
     echo "  pod-status              Verify pod status only"
     echo "  health-validation       Verify health validation only"
     echo "  service-accessibility   Verify service accessibility only"
+    echo "  api-endpoints           Verify comprehensive API endpoints only"
     echo "  app-functionality       Verify application functionality only"
     echo "  comprehensive           Run all verification checks (default)"
     echo "  helm-integration        Run Helm verification integration"
@@ -343,6 +409,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         service-accessibility)
             verify_service_accessibility
+            exit $?
+            ;;
+        api-endpoints)
+            verify_api_endpoints
             exit $?
             ;;
         app-functionality)

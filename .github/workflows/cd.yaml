@@ -86,6 +86,15 @@ jobs:
             curl -f http://$SERVICE_IP/health || exit 1
           fi
       
+      # Run comprehensive deployment verification
+      - name: Run Deployment Verification
+        run: |
+          # Make sure the verification script exists and is executable
+          chmod +x ./scripts/deployment-verification.sh
+          
+          # Run the comprehensive verification script
+          ./scripts/deployment-verification.sh comprehensive -n ocloud -a ocloud-app
+      
       # Post-deploy verification with readiness checks
       - name: Post-Deploy Verification
         run: |
@@ -114,6 +123,10 @@ jobs:
           # Verify liveness endpoint
           echo "Testing liveness endpoint..."
           kubectl exec $POD_NAME -n ocloud -c ocloud-app -- wget -qO- localhost:8080/health
+          
+          # Verify status endpoint for comprehensive validation
+          echo "Testing status endpoint..."
+          kubectl exec $POD_NAME -n ocloud -c ocloud-app -- wget -qO- localhost:8080/status
           
           echo "All post-deploy verifications passed!"
 

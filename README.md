@@ -43,6 +43,9 @@ The continuous deployment pipeline automates the deployment of applications to K
 - Health check endpoints
 - Rollout status verification
 - Service connectivity tests
+- Comprehensive post-deploy validation using `deployment-verification.sh` script
+- API endpoint validation to ensure all endpoints are responsive
+- End-to-end system validation including status, info, security, and config endpoints
 
 ### 4. Deployment Strategies
 The repository includes examples of different deployment strategies:
@@ -81,6 +84,9 @@ As part of Week 4 studies, we've enhanced the deployment with production-ready o
 - Enhanced verification steps in CD pipeline after deployment
 - Automated checks for pod status and service accessibility
 - Integration with `kubectl rollout status` for comprehensive validation
+- Comprehensive API endpoint validation using the new `deployment-verification.sh` script
+- Multi-level verification including health, readiness, status, info, security, and config endpoints
+- Command-line interface for selective verification of specific aspects (pods, services, API endpoints, etc.)
 
 ### Observability
 - Built-in health and readiness endpoints in the application

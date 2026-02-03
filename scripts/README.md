@@ -26,7 +26,40 @@ A PowerShell equivalent of the bash script for Windows environments.
 ```
 
 ### deployment-verification.sh
-Verifies that deployments are successful and running as expected.
+Comprehensive verification script that implements end-to-end validation for Kubernetes deployments. This script performs multiple types of checks including pod status, health validation, service accessibility, API endpoint verification, and application functionality validation.
+
+**Usage:**
+```bash
+./deployment-verification.sh [options] [command]
+```
+
+**Commands:**
+- `pod-status`: Verify pod status only
+- `health-validation`: Verify health validation only
+- `service-accessibility`: Verify service accessibility only
+- `api-endpoints`: Verify comprehensive API endpoints only
+- `app-functionality`: Verify application functionality only
+- `comprehensive`: Run all verification checks (default)
+- `helm-integration`: Run Helm verification integration
+
+**Options:**
+- `-n, --namespace`: Set namespace (default: ocloud)
+- `-a, --app-name`: Set app name (default: ocloud-app)
+- `-t, --timeout`: Set timeout (default: 300s)
+- `-p, --health-port`: Set health port (default: 8080)
+- `-h, --help`: Show help message
+
+**Example:**
+```bash
+# Run all verification checks
+./deployment-verification.sh comprehensive
+
+# Check only API endpoints in production namespace
+./deployment-verification.sh -n production api-endpoints
+
+# Verify deployment with custom app name
+./deployment-verification.sh -a my-app service-accessibility
+```
 
 ### deployment-strategies.sh
 Implements different deployment strategies (rolling, blue-green, canary).
